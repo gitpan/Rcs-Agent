@@ -1,0 +1,63 @@
+#
+# $Id: README,v 1.3 2002/01/07 13:03:29 nick Exp $
+#
+
+DESCRIPTION
+-----------
+
+This is Rcs::Agent, version 1.00, an object oriented RCS perl library, used
+for creating and manipulating RCS archives within perl programs.  
+
+Rcs::Agent is copyright (C) 2001, 2002, Network Ability Ltd.  All rights
+reserved.  This software may be redistributed under the terms of the license
+included in this software distribution.  Please see the file "LICENSE" for
+further details.
+
+
+PREREQUISITES
+-------------
+
+A Unix or Unix-look-alike.  Rcs::Agent will not run under non-unixy systems.
+
+The following perl modules are also needed for Rcs::Agent to run properly:
+
+String::ShellQuote-1.00
+File::MkTemp
+
+These (and many other) useful packages are available from your local CPAN
+archive, or http://www.perl.com/.
+
+
+INSTALLATION
+------------
+
+tar -xvzf Rcs::Agent-1.00.tar.gz
+cd Rcs::Agent-1.00
+perl Makefile.PL
+make
+make install
+
+BUGS & SECURITY
+---------------
+
+Rcs::Agent is coded carefully with security in mind.  Like all code,
+however, there is a possibility that bugs or security problems have slipped
+through the net.  If you find a problem with the code, please email us at
+rcs-agent /at/ netability.ie, detailing the problem, and providing a patch
+if possible.
+
+
+CONTRIBUTORS
+------------
+
+Nick Hilliard - nick /at/ netability.ie
+
+
+CONTACT INFORMATION
+-------------------
+
+Rcs::Agent is written by Network Ability Ltd, a Dublin, Ireland-based
+company specialising in ISP consultancy and contracting services.  Among
+many other things, we write perl code to suit all occasions.  Please contact
+us at <info /at/ netability.ie> with your requirements.
+
