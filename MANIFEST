@@ -4,6 +4,7 @@ LICENSE
 README
 Makefile.PL
 Agent.pm
+ChangeLog
 t/00-initialize.t
 t/load.t
 t/parse.t

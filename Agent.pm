@@ -2,7 +2,7 @@
 #
 # An RCS frobnicator
 #
-# $Id: Agent.pm,v 1.19 2002/01/10 14:21:45 nick Exp $
+# $Id: Agent.pm,v 1.21 2002/02/19 18:02:43 nick Exp $
 
 package Rcs::Agent;
 
@@ -24,7 +24,7 @@ use File::MkTemp;
 
 use vars qw(@ISA @EXPORT_OK @EXPORT $VERSION $AUTOLOAD);
 
-$VERSION = '1.00';
+$VERSION = '1.01';
 
 1;
 
@@ -465,20 +465,20 @@ sub parse {
 		if ($data =~ /^log/) {
 			chomp ($data = <INPUT>);
 			$data =~ s/^\@//;
-			push @{$self->{revisions}->{$revision}->{log}}, log_unquote($data) if ($data);
+			push @{$self->{revisions}->{$revision}->{log}}, log_unquote($data) if ($data =~ /./);
 			while (chomp($data = <INPUT>)) {
 				if ($data =~ /(|[^\@])\@$/) {
 					$data =~ s/\@$//;
 					push @{$self->{revisions}->{$revision}->{log}}, log_unquote($data) if ($data);
 					last;
 				}
-				push @{$self->{revisions}->{$revision}->{log}}, log_unquote($data) if ($data);
+				push @{$self->{revisions}->{$revision}->{log}}, log_unquote($data);
 			}
 		}
 
 		$data = <INPUT>;
 		if ($data =~ /^text/) {
-			chomp ($data = <INPUT>);
+			$data = <INPUT>;
 			$data =~ s/^\@//;
 
 			TEXT: while ($data) {
