@@ -1,14 +1,14 @@
 #
-# $Id: README,v 1.3 2002/01/07 13:03:29 nick Exp $
+# $Id: README,v 1.4 2003/04/28 14:29:43 nick Exp $
 #
 
 DESCRIPTION
 -----------
 
-This is Rcs::Agent, version 1.00, an object oriented RCS perl library, used
+This is Rcs::Agent, version 1.03, an object oriented RCS perl library, used
 for creating and manipulating RCS archives within perl programs.  
 
-Rcs::Agent is copyright (C) 2001, 2002, Network Ability Ltd.  All rights
+Rcs::Agent is copyright (C) 2001-2003 Network Ability Ltd.  All rights
 reserved.  This software may be redistributed under the terms of the license
 included in this software distribution.  Please see the file "LICENSE" for
 further details.
@@ -17,22 +17,25 @@ further details.
 PREREQUISITES
 -------------
 
-A Unix or Unix-look-alike.  Rcs::Agent will not run under non-unixy systems.
+A Unix or Unix-look-alike.  Rcs::Agent will almost certainly not run under
+non-unixy systems.
 
 The following perl modules are also needed for Rcs::Agent to run properly:
 
 String::ShellQuote-1.00
-File::MkTemp
+File::Temp
 
 These (and many other) useful packages are available from your local CPAN
-archive, or http://www.perl.com/.
+archive, or http://www.perl.com/.   File::Temp is included with the base
+distribution of perl 5.7 and above, so if you're running this version or
+anything more recent, there's no need to install this module.
 
 
 INSTALLATION
 ------------
 
-tar -xvzf Rcs::Agent-1.00.tar.gz
-cd Rcs::Agent-1.00
+tar -xvzf Rcs::Agent-1.XX.tar.gz
+cd Rcs::Agent-1.XX
 perl Makefile.PL
 make
 make install
@@ -45,6 +48,10 @@ however, there is a possibility that bugs or security problems have slipped
 through the net.  If you find a problem with the code, please email us at
 rcs-agent /at/ netability.ie, detailing the problem, and providing a patch
 if possible.
+
+In particular, we recommend that all developers use the 'tmpdir' parameter
+when creating new objects to ensure that RCS does not use /tmp for its
+temporary files.  Please see the man page for more details on this.
 
 
 CONTRIBUTORS

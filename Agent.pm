@@ -2,7 +2,7 @@
 #
 # An RCS frobnicator
 #
-# $Id: Agent.pm,v 1.22 2002/05/07 13:08:55 nick Exp $
+# $Id: Agent.pm,v 1.27 2003/05/02 15:06:48 nick Exp $
 
 package Rcs::Agent;
 
@@ -17,14 +17,14 @@ use Cwd;
 
 # These packages are from CPAN
 use String::ShellQuote;
-use File::MkTemp;
+use File::Temp;
 
 # Data::Dumper is used solely for debugging
 # use Data::Dumper;
 
 use vars qw(@ISA @EXPORT_OK @EXPORT $VERSION $AUTOLOAD);
 
-$VERSION = '1.02';
+$VERSION = '1.03';
 
 1;
 
@@ -681,11 +681,12 @@ sub checkin {
 			$self->{err} = "incorrect revision format";
 			return undef;
 		}
+		if (defined ($self->{revisions}->{$args{revision}})) {
+			$self->{err} = "specified revision already exists";
+			return undef;
+		}
 		$cmdargs .= " -r".shell_quote($args{revision});
 	}
-
-	# *** put in a check here to make sure that the revision does not
-	# already exist.
 
 	my $command = "ci $cmdargs ".shell_quote($self->{rcsfile});
 
@@ -715,7 +716,7 @@ If there is a version of the archive already locked, or if the working file
 is writable, the check-out procedure will normally fail.  This behaviour is
 to prevent the programmer from accidentally over-writing the work of another
 user who may also be editing a revision of the file.  Checkouts can be forced
-by setting the C<force> parameter to the "yes";  this option should not be
+by setting the C<force> parameter to be "yes";  this option should not be
 used unless the operator is certain that no damage will be done.
 
 The checkout() method will return the numeric value 1 on success and undef on
@@ -852,6 +853,20 @@ the working file if none existed previously.
 
 The archive description can be specified using the "description" parameter.
 
+If RCS version 5.7 or higher is installed on the system, the archive can be
+initialized to be binary safe by setting the "binary" parameter.  Note that
+rcsmerge may not work properly on archives with binary data, and also that
+if there is a string in the binary file which matches an RCS keyword (i.e.
+$Id: Agent.pm,v 1.27 2003/05/02 15:06:48 nick Exp $, $Log: Agent.pm,v $
+$Id$, Revision 1.27  2003/05/02 15:06:48  nick
+$Id$, Released Rcs-Agent-1.03.
+$Id$,
+$Id$, * Added extra warning in initialize() about the potential dangers of using
+$Id$,   binary-safe archives
+$Id$,, etc), RCS may attempt to replace it with the its corresponding
+expanded value on checkout which may corrupt your binary file.  See L<co>
+for more details both of these issues.
+
 The initialize() method returns the numeric value 1 on success and undef on
 failure.
 
@@ -875,6 +890,7 @@ sub initialize {
 
 	$args{description} = "" unless (defined ($args{description}) && $args{description} =~ /\S/);
 
+	$cmdargs .= " -kb" if ($args{binary});
 	$cmdargs .= " -t-".shell_quote($args{description}) if ($args{description});
 
 	my $command = "rcs -i $cmdargs ".shell_quote($self->{rcsfile});
@@ -918,7 +934,7 @@ sub rexists {
 		return undef;
 	}
 
-	$revision = $args{revision};
+	$revision = $self->symbol_lookup(symbol => $args{revision});
 
 	unless (defined($self->{revisions})) {
 		$self->{err} = "revision tree does not exist - RCS archive not yet set up";
@@ -965,7 +981,7 @@ sub parent {
 
 	$self->parse || return undef;
 
-	my $revision = defined ($args{revision}) ? $args{revision} : $self->{head};
+	my $revision = defined ($args{revision}) ? $self->symbol_lookup(symbol => $args{revision}) : $self->{head};
 
 	$self->rexists (revision => $revision) || return undef;
 
@@ -992,7 +1008,7 @@ sub child {
 
 	$self->parse || return undef;
 
-	my $revision = defined ($args{revision}) ? $args{revision} : $self->{head};
+	my $revision = defined ($args{revision}) ? $self->symbol_lookup(symbol => $args{revision}) : $self->{head};
 
 	$self->rexists (revision => $revision) || return undef;
 
@@ -1015,7 +1031,7 @@ sub revisions {
 	my $self = shift;
 	my %args = @_;
 
-	# *** we need to do something about branches here
+	# FIXME: we need to do something about branches here
 
 	$self->{err} = "";
 
@@ -1045,8 +1061,6 @@ sub symbols {
 	$self->{err} = "";
 
 	$self->parse || return undef;
-
-	
 
 	my @array = keys (%{$self->{symbols}});
 
@@ -1103,7 +1117,7 @@ sub AUTOLOAD {
 
 	$self->parse || return undef;
 
-	$revision = defined ($args{revision}) ? $args{revision} : $self->{head};
+	$revision = defined ($args{revision}) ? $self->symbol_lookup(symbol => $args{revision}) : $self->{head};
 
 	$self->rexists (revision => $revision) || return undef;
 
@@ -1158,8 +1172,8 @@ sub pipestderrout {
 		return undef;
 	}
 
-	my $tmpstdout = $tmpdir."/".mktemp ("tempXXXXXX", $tmpdir);
-	my $tmpstderr = $tmpdir."/".mktemp ("tempXXXXXX", $tmpdir);
+	my $tmpstdout = File::Temp::mktemp("$tmpdir/tempXXXXXX");
+	my $tmpstderr = File::Temp::mktemp("$tmpdir/tempXXXXXX");
 
 	if (defined ($args{dir})) {
 		$cwd = cwd();
@@ -1198,6 +1212,33 @@ sub pipestderrout {
 	$stderr = \@buf2;
 
 	return ($exitcode, $stdout, $stderr);
+}
+
+
+##
+## symbol_lookup
+##
+## Looks up the parameter "symbol" in the RCS symbols table, and if found,
+## returns the revision version of the symbol.  Otherwise, returns the
+## original version of the "symbol" parameter.
+##
+## This function allow you do do things like:
+##
+## $args{revision} = $self->symbol_lookup(symbol => $args{revision});
+##
+## which allows the programmer to use rcs symbols everywhere instead of
+## version numbers.
+##
+
+sub symbol_lookup {
+        my $self = shift;
+	my %args = @_;
+
+	if (defined ($self->{symbols}->{$args{symbol}})) {
+		return $self->{symbols}->{$args{symbol}};
+	}
+
+	return $args{symbol};
 }
 
 
@@ -1266,15 +1307,6 @@ on them.
 
 =item o
 
-L<Rcs::Agent> is not guaranteed to work with binary files.
-
-=item o
-
-several functions which should take branch names instead of revision
-names don't take them yet.
-
-=item o
-
 "Merge is Hard!".  Rcs::Agent does not support merging branches because this
 is something which often requires manual intervention.  On the grounds that
 providing broken functionality along these lines would just encourage a bad
@@ -1288,7 +1320,7 @@ L<Rcs::Agent> does not yet grok CVS's magic branch tags.
 =item o
 
 revisions() and symbols() both contain references to branch revisions.
-this needs to be changed.
+This needs to be changed.
 
 Please mail rcs-agent-lib@netability.ie if you find any more bugs.  Patches
 should be sent in unified diff format (i.e. I<diff -u>), or context diff

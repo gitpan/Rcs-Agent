@@ -1,3 +1,44 @@
+2003-05-02 16:06  nick
+
+	* Agent.pm: Released Rcs-Agent-1.03.
+	
+	* Added extra warning in initialize() about the potential dangers
+	of using   binary-safe archives
+
+2003-04-28 16:52  nick
+
+	* Agent.pm: Added symbol_lookup() to allow all functions to take
+	tags instead of revision numbers
+	
+	Added support for binary files (thanks to Nathan Ollerenshaw
+	<nathan / at / valuecommerce.ne.jp>)
+
+2003-04-28 15:41  nick
+
+	* Agent.pm: Don't allow checkin() to check in a revision which
+	already exists.
+
+2003-04-28 15:30  nick
+
+	* Agent.pm: Change from File::MkTemp to File::Temp
+
+2003-04-28 15:29  nick
+
+	* README: Note use of File::Temp instead of File::MkTemp
+
+2003-04-25 17:54  nick
+
+	* Makefile.PL: Changed to using File::Temp
+
+2003-01-08 12:34  nick
+
+	* Agent.pm: fix typo
+
+2002-05-07 14:11  nick
+
+	* t/diff.t: test for presence of both revision1 and revision2
+	params.
+
 2002-05-07 14:08  nick
 
 	* Agent.pm: diff() would return error if both revision1 and

@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.6 2002/01/07 13:03:29 nick Exp $
+# $Id: Makefile.PL,v 1.7 2003/04/25 16:54:54 nick Exp $
 #
 # Copyright (C) 2001, 2002 Network Ability Ltd.  All rights reserved.  This
 # software may be redistributed under the terms of the license included in
@@ -14,7 +14,7 @@ WriteMakefile(
 
 	PREREQ_PM	=> {
 		String::ShellQuote => '1.00',
-		File::MkTemp => '',
+		File::Temp => '',
 	},
 
 	'dist'		=> {
