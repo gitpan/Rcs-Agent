@@ -1,3 +1,13 @@
+2002-05-07 14:08  nick
+
+	* Agent.pm: diff() would return error if both revision1 and
+	revision2 parameters were not specified, contrary to documentation.
+	 Pointed out by B Mills.
+	
+	* Some documentation typos and cleanups.
+	
+	* Bumped version to 1.02
+
 2002-02-19 18:09  nick
 
 	* MANIFEST: - add ChangeLog to MANIFEST

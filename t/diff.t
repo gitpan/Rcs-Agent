@@ -1,5 +1,5 @@
 #
-# $Id: diff.t,v 1.3 2002/01/07 13:03:29 nick Exp $
+# $Id: diff.t,v 1.4 2002/05/07 13:11:52 nick Exp $
 #
 # Copyright (C) 2001, 2002 Network Ability Ltd.  All rights reserved.  This
 # software may be redistributed under the terms of the license included in
@@ -14,5 +14,7 @@ print "1..1\n";
 my $rcs = new Rcs::Agent (file => "/tmp/index");
 
 my $output = $rcs->diff (format => "unified", revision1 => "1.1", revision2 => "1.2");
+
+$output = $rcs->diff;
 
 print "ok 1\n";

@@ -2,7 +2,7 @@
 #
 # An RCS frobnicator
 #
-# $Id: Agent.pm,v 1.21 2002/02/19 18:02:43 nick Exp $
+# $Id: Agent.pm,v 1.22 2002/05/07 13:08:55 nick Exp $
 
 package Rcs::Agent;
 
@@ -24,7 +24,7 @@ use File::MkTemp;
 
 use vars qw(@ISA @EXPORT_OK @EXPORT $VERSION $AUTOLOAD);
 
-$VERSION = '1.01';
+$VERSION = '1.02';
 
 1;
 
@@ -58,9 +58,10 @@ Typically, new() would be called using the following parameters:
 
     $rcs = new Rcs::Agent (	file => "/data/src/foobar.c");
 
-The C<file> parameter instructs the module about what the name of the work
-file is.  This is the only parameter which is absolutely necessary: if it
-is not supplied, then new() will return undef.
+The C<file> parameter tells the module what the name of the work file is.  This
+is the only parameter which is absolutely necessary: if it is not supplied,
+then new() will return undef and all subsequent method calls using the C<$rcs>
+handle will fail.
 
 The C<workdir> parameter can be used to specify the working directory of
 the file, if for some reason the programmer decides not to specify it using
@@ -71,7 +72,7 @@ the C<file> parameter.  The example above could easily have been written:
 
 The C<rcsdir> parameter specifies the location of the RCS archive.  This is
 normally designated as the "RCS/" directory off the working directory, but
-there is no reason why the rcsdir cannot be placed somewhere else if so 
+there is no reason why C<rcsdir> cannot be placed somewhere else if so 
 desired.  If this parameter is not specified, then the module uses some
 simplistic heuristics to determine the location of the RCS directory
 automatically.  If there is a directory off the working directory called "RCS/"
@@ -174,8 +175,8 @@ sub new {
 
 The err() method returns whatever is currently in the error buffer.  Whenever
 any method in this library fails for some reason, the method will put a message
-into the error buffer and then return undef to the calling function.  This method
-is used to access the error message.  It takes no parameters and returns
+into the error buffer and then return undef to the calling function.  This
+method is used to access the error message.  It takes no parameters and returns
 a scalar text string, which may be zero length if there is no current error.
 
 =cut
@@ -544,7 +545,7 @@ sub parse {
 =head2 diff
 
 The diff() method returns a list of differences between one version of the 
-RCS archive any another.  If neither the C<revision1> nor C<revision2> 
+RCS archive and another.  If neither the C<revision1> nor C<revision2> 
 parameters are passed to this method, then it will return the list of diffs 
 between the current working file and the head version.  If C<revision1> alone
 is specified, then it will return a list of diffs between the current working
@@ -597,6 +598,7 @@ sub diff {
 	}
 
 	foreach my $rev ($args{revision1}, $args{revision2}) {
+		next unless (defined ($rev));
 		# We can either have a revision or a tag here
 		unless (defined ($self->{revisions}->{$rev}) || 
 			defined ($self->{symbols}->{$rev})) {
