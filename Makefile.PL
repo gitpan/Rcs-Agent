@@ -1,6 +1,6 @@
-# $Id: Makefile.PL,v 1.7 2003/04/25 16:54:54 nick Exp $
+# $Id: Makefile.PL,v 1.8 2007/04/08 09:14:13 nick Exp $
 #
-# Copyright (C) 2001, 2002 Network Ability Ltd.  All rights reserved.  This
+# Copyright (C) 2001 - 2007 Network Ability Ltd.  All rights reserved.  This
 # software may be redistributed under the terms of the license included in
 # this software distribution.  Please see the file "LICENSE" for further
 # details.

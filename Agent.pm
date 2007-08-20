@@ -2,7 +2,7 @@
 #
 # An RCS frobnicator
 #
-# $Id: Agent.pm,v 1.27 2003/05/02 15:06:48 nick Exp $
+# $Id: Agent.pm,v 1.32 2007/08/20 16:39:56 nick Exp $
 
 package Rcs::Agent;
 
@@ -24,7 +24,7 @@ use File::Temp;
 
 use vars qw(@ISA @EXPORT_OK @EXPORT $VERSION $AUTOLOAD);
 
-$VERSION = '1.03';
+$VERSION = '1.05';
 
 1;
 
@@ -165,6 +165,8 @@ sub new {
 
 	$self->{rcsfile} = $self->{rcsdir}."/".$self->{file}.$self->{suffix};
 
+	$self->{hpux} = 1 if $^O eq 'hpux';
+
 	bless $self, $class;
 
 	return $self;
@@ -297,7 +299,7 @@ sub parse {
 
 	# First, we need to delete a whole bunch of stuff if it's already
 	# defined from previous parsing attempts.
-	foreach my $tag (qw (revisions head symbols strict)) {
+	foreach my $tag (qw (access revisions head symbols strict)) {
 		delete $self->{$tag} if defined ($self->{$tag});
 	}
 
@@ -320,6 +322,12 @@ sub parse {
 
 	# For the moment, we only parse head, locks, symbols and strict.
 	foreach my $token (@tokens) {
+		if ($token =~ /^access/) {
+			my @access = split (/ /, $token); shift @access;
+                        $self->{access} = \@access if @access;
+			next;
+		}
+
 		if ($token =~ /^head\s+([\d\.]+)/) {
 			$self->{head} = $1;
 			next;
@@ -609,9 +617,10 @@ sub diff {
 		$cmdargs .= " -r".shell_quote("$rev");
 	}
 
-	my $command = "rcsdiff -q $cmdargs ".shell_quote($self->{rcsfile});
+	my $q = $self->{hpux} ? '' : '-q';
+	my $command = "rcsdiff $q $cmdargs ".shell_quote($self->{rcsfile});
 
-	($exitcode, $stdout, $stderr) = $self->pipestderrout(command => $command);
+	($exitcode, $stdout, $stderr) = $self->pipestderrout(command => $command, dir => $self->{workdir});
 
 	if ($exitcode > 1) {
 		$self->{err} = join("\n", @{$stderr})."\n";
@@ -631,6 +640,10 @@ revision tree, unless the revision is specified using the C<revision> parameter.
 A comment can be added to the revision's log using the I<log> parameter.  If
 no comment or a blank comment is specified, then the revision is logged with the 
 text "*** empty log message ***", as happens when using the RCS C<ci> program.
+
+The revision may be tagged with a symbolic name using the I<tag> parameter.
+If the I<force> parameter is set to "yes" then the symbolic name will override
+any previous assignment of the symbolic name.
 
 If the programmer wishes to check the version out after check-in, then the 
 C<checkout> parameter should be set to "yes".  This is useful if the programmer
@@ -667,6 +680,12 @@ sub checkin {
 
 	$cmdargs .= "-m".shell_quote($args{log});
 
+	# Added 'tag' argument to checkin so we can tag the revision checked in
+	if ( defined $args{tag} ) {
+		$cmdargs .= ( defined($args{force}) and istrue($args{force}) ) ? " -N" : " -n";
+		$cmdargs .= shell_quote($args{tag});
+	}
+
 	my $lock = defined ($args{lock}) ? istrue ($args{lock}) : 0;
 	my $checkout = (defined ($args{checkout}) || $lock) ? istrue ($args{checkout}) : 1;
 
@@ -697,7 +716,7 @@ sub checkin {
 		return undef;
 	}
 
-	return $stdout;
+	return 1;
 }
 
 
@@ -705,7 +724,7 @@ sub checkin {
 
 The checkout() method allows the programmer to check a version of the file
 out of the RCS archive.  By default, if no revision is specified using the
-C<revision> parameter, then the head revisision will be checked out. It is 
+C<revision> parameter, then the head revision will be checked out. It is 
 possible to specify the revisions using symbolic names or tags instead of
 version numbers when checking out revisions.
 
@@ -739,7 +758,15 @@ sub checkout {
 	$self->parse || return undef;
 
 	$cmdargs .= " -l" if (defined ($args{lock}) && istrue ($args{lock}));
-	$cmdargs .= " -f" if (defined ($args{force}) && istrue ($args{force}));
+
+	# HP-UX co does not have -f option, so just delete the file
+	if ( $self->{hpux} ) {
+		if (defined($args{force}) and istrue($args{force})) {
+			unlink "$self->{workdir}/$self->{file}";
+		}
+	} else {
+		$cmdargs .= " -f" if (defined ($args{force}) && istrue ($args{force}));
+	}
 
 	if (defined ($args{revision})) {
 		$self->rexists (revision => $args{revision}) || return undef;
@@ -857,15 +884,9 @@ If RCS version 5.7 or higher is installed on the system, the archive can be
 initialized to be binary safe by setting the "binary" parameter.  Note that
 rcsmerge may not work properly on archives with binary data, and also that
 if there is a string in the binary file which matches an RCS keyword (i.e.
-$Id: Agent.pm,v 1.27 2003/05/02 15:06:48 nick Exp $, $Log: Agent.pm,v $
-$Id$, Revision 1.27  2003/05/02 15:06:48  nick
-$Id$, Released Rcs-Agent-1.03.
-$Id$,
-$Id$, * Added extra warning in initialize() about the potential dangers of using
-$Id$,   binary-safe archives
-$Id$,, etc), RCS may attempt to replace it with the its corresponding
-expanded value on checkout which may corrupt your binary file.  See L<co>
-for more details both of these issues.
+\$Id\$, \$Log\$, etc), RCS may attempt to replace it with the its
+corresponding expanded value on checkout which may corrupt your binary file. 
+See L<co> for more details both of these issues.
 
 The initialize() method returns the numeric value 1 on success and undef on
 failure.
@@ -1018,8 +1039,8 @@ sub child {
 
 =head2 revisions
 
-The revisions() returns a reference to an array containing the names of all
-of the revisions listed in the RCS archive.
+The revisions() method returns a reference to an array containing the names
+of all of the revisions listed in the RCS archive.
 
 =cut
 
@@ -1067,6 +1088,81 @@ sub symbols {
 	\@array;
 }
 
+=head2 access
+
+The access() method returns a reference to an array containing the names
+of all of the logins who have access to lock the RCS file, or undef
+if it is an empty list.
+
+=cut
+
+##
+## access
+##
+
+# Added access method to return access list of rcs file
+sub access {
+	my $self = shift;
+	my %args = @_;
+
+	$self->{err} = "";
+
+	$self->parse || return undef;
+
+	return unless exists $self->{access};
+
+	my @array = @{$self->{access}} or return;
+
+	\@array;
+}
+
+=head2 description
+
+description() is used to read or write the archive description.  This is the
+text which is logged in the RCS archive using the "-t-" parameter.  If the
+"description" parameter is set in the argument list, then the description in
+the archive file is set to the value specified.
+
+    my $description = $rcs->description ();
+
+In this code, the $description variable will be set to the archive's
+description field, if it exists.
+
+    $rcs->description (description => 'Main source file');
+
+In this code snippet, the RCS archive description is set to be be the value
+"Main source file".
+
+=cut
+
+##
+## description
+##
+
+sub description {
+	my $self = shift;
+	my %args = @_;
+
+	$self->{err} = "";
+
+	$self->parse || return undef;
+
+	if ($args{description}) {
+		my ($exitcode, $stdout, $stderr);
+		my $cmdargs .= " -t-".shell_quote($args{description});
+		my $command = "rcs -q $cmdargs ".shell_quote($self->{rcsfile});
+		
+		($exitcode, $stdout, $stderr) = $self->pipestderrout(command => $command, dir => $self->{workdir});
+		
+		if ($exitcode > 1) {
+			$self->{err} = join("\n", @{$stderr})."\n";
+			return undef;
+		}
+		$self->{desc} = $args{description};
+	}
+
+	return $self->{desc};
+}
 
 =head2 locked, locker, state, author, date, log
 
@@ -1080,7 +1176,7 @@ corresponds to a line of the log message for the specified revision.
 The locked() method is the same as locker(), and is included to allow more
 readable code such as
 
-    if ($rcs->locked(revision => "1.3") {
+    if ($rcs->locked(revision => "1.3")) {
         <code if version is locked>
     } else {
         <code if version is unlocked>
@@ -1108,7 +1204,7 @@ sub AUTOLOAD {
 
 	$method =~ s/^.*:://;
 
-	($method =~ /^(locked|locker|state|author|date|log)$/) ||
+	($method =~ /^(access|locked|locker|state|author|date|log)$/) ||
 		confess ("Can't locate object method \"$method\"");
 
 	$method = "locker" if ($method eq "locked");
@@ -1166,7 +1262,7 @@ sub pipestderrout {
 		return undef;
 	}
 
-	my $tmpdir = defined ($self->{tmpdir}) ? $self->tmpdir : "/tmp";
+	my $tmpdir = defined ($self->{tmpdir}) ? $self->{tmpdir} : "/tmp";
 	unless (-d $tmpdir && -r$tmpdir) {
 		$self->{err} = "cannot write to tmpdir: \"$tmpdir\"";
 		return undef;
@@ -1177,6 +1273,9 @@ sub pipestderrout {
 
 	if (defined ($args{dir})) {
 		$cwd = cwd();
+		# $cwd is tainted.  we need to untaint
+		$cwd =~ m|^([/\w\-\._]+)$|;
+		$cwd = $1;
 		unless (chdir ($args{dir})) {
 			$self->{err} = "cannot change to working directory";
 			return undef;
@@ -1288,6 +1387,19 @@ sub istrue {
 	return 0;
 }
 
+##
+## usinghpux
+##
+## Setting this invokes some hackery elsewhere
+## to get around crippled behaviour on HP's version of rcs
+##
+
+sub usinghpux {
+  my $self = shift;
+  $self->{hpux} = shift;
+}
+
+
 
 =head1 BUGS
 
@@ -1342,7 +1454,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2001, 2002 Network Ability Ltd.  All rights reserved.  This
+Copyright (C) 2001 - 2007 Network Ability Ltd.  All rights reserved.  This
 software may be redistributed under the terms of the license included in
 this software distribution.  Please see the file "LICENSE" for further
 details.

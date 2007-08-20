@@ -13,3 +13,5 @@ t/checkin.t
 t/checkout.t
 t/lock.t
 t/state.t
+t/description.t
+META.yml                                 Module meta-data (added by MakeMaker)
